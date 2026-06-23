@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import connectDB from "./mongodb";
 import User from "@/models/User";
+import Profile from "@/models/Profile";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   
@@ -22,9 +23,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         await connectDB();
 
         const user = await User.findOne({ email: credentials.email });
+
+        if (!user) return null;
         
-        if (!user) return null;
-        if (!user) return null;
+        const profile = await Profile.findOne({ user_id: user._id });
 
         const isValid = await bcrypt.compare(
           credentials.password as string,
@@ -35,10 +37,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         return {
           id:    user._id.toString(),
-          name:  user.name,
+          name:  profile?.name ?? null,
           email: user.email,
           role:  user.role,
-          image: user.image ?? null,
+          image: profile?.image ?? null,
         };
       },
     }),
