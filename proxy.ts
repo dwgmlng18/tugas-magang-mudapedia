@@ -5,6 +5,7 @@ export const runtime = "nodejs";
 
 export default auth((req) => {
   const isLoggedIn   = !!req.auth;
+  const role = req.auth?.user.role;
   const { pathname } = req.nextUrl;
 
   const protectedRoutes = ["/dashboard"];
@@ -15,7 +16,13 @@ export default auth((req) => {
   }
 
   if (authRoutes.includes(pathname) && isLoggedIn) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    const dest = role === "admin" ? "/dashboard/admin/kategori" : "/dashboard/kasir/produk";
+    return NextResponse.redirect(new URL(dest, req.url));
+  }
+
+  const adminOnlyRoutes = ["/dashboard/admin/kategori", "/dashboard/admin/produk", "/dashboard/admin/transaksi", "/dashboard/admin/user"];
+  if (adminOnlyRoutes.some((r) => pathname.startsWith(r)) && role !== "admin") {
+    return NextResponse.redirect(new URL("/dashboard/kasir/produk", req.url));
   }
 
   return NextResponse.next();

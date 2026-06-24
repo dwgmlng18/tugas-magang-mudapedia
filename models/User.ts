@@ -4,6 +4,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: "admin" | "kasir";
+  status: "pending" | "approve" | "reject"; 
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +25,11 @@ const UserSchema = new Schema<IUser>(
       type: String, 
       enum: ["admin", "kasir"],
       default: "kasir"
+    },
+    status: {
+      type: String,
+      enum: ["pending", "approve", "reject"],
+      default: "pending"
     },
   },
   { 

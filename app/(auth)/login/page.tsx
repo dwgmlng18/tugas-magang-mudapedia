@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getSession } from "next-auth/react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -30,7 +31,12 @@ export default function LoginPage() {
     if (res?.error) {
       setError("Email atau password salah.");
     } else {
-      router.push("/dashboard");
+      const session = await getSession();
+      if (session?.user.role === "admin") {
+        router.push("/dashboard/admin/kategori");
+      } else {
+        router.push("/dashboard/kasir/produk");
+      }
       router.refresh();
     }
   };
