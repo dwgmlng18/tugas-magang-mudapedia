@@ -47,8 +47,8 @@ export default function RegisterPage() {
     if (!res.ok) {
       setError(data.message ?? "Registrasi gagal.");
     } else {
-      setSuccess("Registrasi berhasil! Mengarahkan ke halaman masuk...");
-      setTimeout(() => router.push("/login"), 1500);
+      setSuccess("Registrasi berhasil! Akun kamu sedang menunggu persetujuan admin sebelum bisa masuk.");
+      setTimeout(() => router.push("/login"), 2500);
     }
   };
 

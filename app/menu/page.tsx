@@ -15,14 +15,15 @@ interface Product {
   description?: string;
   price: number;
   image?: string;
-  category_id: { _id: string; name: string };
+  category_id: { _id: string; name: string } | null;
 }
 
 export default function MenuPage() {
-  const [products, setProducts]         = useState<Product[]>([]);
-  const [categories, setCategories]     = useState<Category[]>([]);
+  const [products,       setProducts]       = useState<Product[]>([]);
+  const [categories,     setCategories]     = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState("semua");
-  const [loading, setLoading]           = useState(true);
+  const [search,         setSearch]         = useState("");
+  const [loading,        setLoading]        = useState(true);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -40,10 +41,9 @@ export default function MenuPage() {
     }
   };
 
-  const filtered =
-    activeCategory === "semua"
-      ? products
-      : products.filter((p) => p.category_id._id === activeCategory);
+  const filtered = products
+    .filter((p) => activeCategory === "semua" || p.category_id?._id === activeCategory)
+    .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
   const formatRupiah = (price: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(price);
@@ -74,7 +74,37 @@ export default function MenuPage() {
 
       <div className="max-w-5xl mx-auto px-5 py-6">
 
-        {/* Filter */}
+        {/* Search */}
+        <div className="relative mb-4">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none w-4 h-4"
+            fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round"
+              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari nama produk..."
+            className="w-full border-[1.5px] border-gray-200 rounded-lg pl-9 pr-10 py-2.5 text-[13px]
+                       text-gray-800 placeholder-gray-300 outline-none focus:border-green-400
+                       transition-colors bg-white"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Filter Kategori */}
         <div className="flex gap-2 flex-wrap mb-6">
           <button
             onClick={() => setActiveCategory("semua")}
@@ -111,7 +141,9 @@ export default function MenuPage() {
         {/* Kosong */}
         {!loading && filtered.length === 0 && (
           <div className="text-center py-24">
-            <p className="text-gray-400 text-sm font-medium">Belum ada produk tersedia.</p>
+            <p className="text-gray-400 text-sm font-medium">
+              {search ? `Tidak ada produk dengan nama "${search}".` : "Belum ada produk tersedia."}
+            </p>
           </div>
         )}
 
@@ -145,7 +177,7 @@ export default function MenuPage() {
                 {/* Info */}
                 <div className="p-3">
                   <p className="text-[11px] font-bold text-green-600 uppercase tracking-wide mb-1">
-                    {product.category_id.name}
+                    {product.category_id?.name ?? "Tanpa Kategori"}
                   </p>
                   <h3 className="text-[14px] font-bold text-gray-900 leading-snug mb-1">
                     {product.name}

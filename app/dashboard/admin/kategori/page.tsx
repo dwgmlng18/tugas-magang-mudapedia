@@ -7,6 +7,7 @@ import {
   IconTrash,
   IconX,
   IconCheck,
+  IconSearch,
 } from "@tabler/icons-react";
 
 interface Category {
@@ -19,14 +20,15 @@ interface Category {
 export default function KategoriPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState("");
 
   /* Modal state */
-  const [modalOpen,   setModalOpen]   = useState(false);
-  const [editTarget,  setEditTarget]  = useState<Category | null>(null);
-  const [formName,    setFormName]    = useState("");
-  const [formStatus,  setFormStatus]  = useState<"active" | "inactive">("active");
-  const [saving,      setSaving]      = useState(false);
-  const [error,       setError]       = useState("");
+  const [modalOpen,  setModalOpen]  = useState(false);
+  const [editTarget, setEditTarget] = useState<Category | null>(null);
+  const [formName,   setFormName]   = useState("");
+  const [formStatus, setFormStatus] = useState<"active" | "inactive">("active");
+  const [saving,     setSaving]     = useState(false);
+  const [error,      setError]      = useState("");
 
   useEffect(() => { fetchCategories(); }, []);
 
@@ -43,6 +45,11 @@ export default function KategoriPage() {
       setLoading(false);
     }
   };
+
+  /* ── Filter pencarian nama ── */
+  const filtered = categories.filter((cat) =>
+    cat.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   /* ── Open modal tambah ── */
   const openAdd = () => {
@@ -69,7 +76,6 @@ export default function KategoriPage() {
     setError("");
     try {
       if (editTarget) {
-        /* PUT edit — kirim nama + status */
         const res = await fetch(`/api/admin/categories/${editTarget._id}`, {
           method:  "PUT",
           headers: { "Content-Type": "application/json" },
@@ -79,7 +85,6 @@ export default function KategoriPage() {
         const { category } = await res.json();
         setCategories((prev) => prev.map((c) => (c._id === category._id ? category : c)));
       } else {
-        /* POST tambah — hanya nama, status otomatis active di backend */
         const res = await fetch("/api/admin/categories", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
@@ -117,7 +122,7 @@ export default function KategoriPage() {
         <div>
           <h1 className="text-[18px] font-bold text-gray-900 leading-none">Manajemen Kategori</h1>
           <p className="text-[12px] text-gray-400 mt-1">
-            {loading ? "Memuat..." : `${categories.length} kategori terdaftar`}
+            {loading ? "Memuat..." : `${filtered.length} kategori ditemukan`}
           </p>
         </div>
         <button
@@ -130,6 +135,31 @@ export default function KategoriPage() {
         </button>
       </div>
 
+      {/* Search */}
+      <div className="relative mb-5">
+        <IconSearch
+          size={15}
+          stroke={2}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+        />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cari nama kategori..."
+          className="w-full border-[1.5px] border-gray-200 rounded-lg pl-9 pr-4 py-2 text-[13px]
+                     text-gray-800 placeholder-gray-300 outline-none focus:border-green-400 transition-colors"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
+          >
+            <IconX size={14} stroke={2} />
+          </button>
+        )}
+      </div>
+
       {/* Loading */}
       {loading && (
         <div className="flex justify-center items-center py-24">
@@ -138,14 +168,16 @@ export default function KategoriPage() {
       )}
 
       {/* Kosong */}
-      {!loading && categories.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div className="text-center py-24">
-          <p className="text-gray-400 text-sm font-medium">Belum ada kategori.</p>
+          <p className="text-gray-400 text-sm font-medium">
+            {search ? `Tidak ada kategori dengan nama "${search}".` : "Belum ada kategori."}
+          </p>
         </div>
       )}
 
       {/* Tabel */}
-      {!loading && categories.length > 0 && (
+      {!loading && filtered.length > 0 && (
         <div className="bg-white border-[1.5px] border-gray-200 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -158,15 +190,10 @@ export default function KategoriPage() {
               </tr>
             </thead>
             <tbody>
-              {categories.map((cat, i) => (
+              {filtered.map((cat, i) => (
                 <tr key={cat._id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
-                  {/* No */}
                   <td className="px-4 py-3 text-[13px] text-gray-400">{i + 1}</td>
-
-                  {/* Nama */}
                   <td className="px-4 py-3 text-[13px] font-semibold text-gray-800">{cat.name}</td>
-
-                  {/* Status — badge saja, tidak bisa diklik */}
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold border ${
                       cat.status === "active"
@@ -177,17 +204,11 @@ export default function KategoriPage() {
                       {cat.status === "active" ? "Aktif" : "Nonaktif"}
                     </span>
                   </td>
-
-                  {/* Tanggal */}
                   <td className="px-4 py-3 text-[13px] text-gray-400">
                     {new Date(cat.createdAt).toLocaleDateString("id-ID", {
-                      day:   "numeric",
-                      month: "short",
-                      year:  "numeric",
+                      day: "numeric", month: "short", year: "numeric",
                     })}
                   </td>
-
-                  {/* Aksi */}
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
@@ -219,7 +240,6 @@ export default function KategoriPage() {
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-sm mx-4 p-6">
-            {/* Modal header */}
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-[16px] font-bold text-gray-900">
                 {editTarget ? "Edit Kategori" : "Tambah Kategori"}
@@ -232,7 +252,6 @@ export default function KategoriPage() {
               </button>
             </div>
 
-            {/* Input nama */}
             <div className="mb-4">
               <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">
                 Nama Kategori
@@ -249,12 +268,9 @@ export default function KategoriPage() {
               {error && <p className="text-[12px] text-red-500 mt-1.5">{error}</p>}
             </div>
 
-            {/* Input status — hanya muncul saat edit */}
             {editTarget && (
               <div className="mb-5">
-                <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">
-                  Status
-                </label>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">Status</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setFormStatus("active")}
@@ -282,7 +298,6 @@ export default function KategoriPage() {
               </div>
             )}
 
-            {/* Buttons */}
             <div className="flex gap-2">
               <button
                 onClick={() => setModalOpen(false)}

@@ -1,9 +1,17 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import connectDB from "./mongodb";
 import User from "@/models/User";
 import Profile from "@/models/Profile";
+
+class PendingError extends CredentialsSignin {
+  code = "PENDING";
+}
+
+class RejectError extends CredentialsSignin {
+  code = "REJECT";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   
@@ -35,6 +43,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         
         if (!isValid) return null;
 
+        if (user.status === "pending") {
+          throw new PendingError();
+        }
+        if (user.status === "reject") {
+          throw new RejectError();
+        }
+
         return {
           id:    user._id.toString(),
           name:  profile?.name ?? null,
@@ -47,10 +62,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id   = user.id;
         token.role = (user as any).role;
+        token.name = user.name;
+        token.image = user.image;
+      }
+      if (trigger === "update" && session) {
+        if (session.name) token.name = session.name;
+        if (session.image !== undefined) token.image = session.image;
       }
       return token;
     },
@@ -59,6 +80,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         session.user.id   = token.id   as string;
         session.user.role = token.role as string;
+        session.user.name = token.name as string | null;
+        session.user.image = token.image as string | null;
       }
       return session;
     },

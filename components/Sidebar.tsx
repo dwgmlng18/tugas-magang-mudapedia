@@ -10,6 +10,7 @@ import {
   IconBox,
   IconChartBar,
   IconUsers,
+  IconUserCircle,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
 } from "@tabler/icons-react";
@@ -23,6 +24,7 @@ interface NavItem {
 const kasirMenu: NavItem[] = [
   { label: "Katalog Produk", href: "/dashboard/kasir/produk",    icon: <IconLayoutGrid  size={18} stroke={1.5} /> },
   { label: "Transaksi",      href: "/dashboard/kasir/transaksi", icon: <IconReceipt     size={18} stroke={1.5} /> },
+  { label: "Profil",         href: "/dashboard/kasir/profil",    icon: <IconUserCircle  size={18} stroke={1.5} /> },
 ];
 
 const adminMenu: NavItem[] = [
@@ -30,6 +32,7 @@ const adminMenu: NavItem[] = [
   { label: "Manajemen Produk",   href: "/dashboard/admin/produk",   icon: <IconBox      size={18} stroke={1.5} /> },
   { label: "Laporan Transaksi",  href: "/dashboard/admin/laporan",  icon: <IconChartBar size={18} stroke={1.5} /> },
   { label: "Manajemen Users",    href: "/dashboard/admin/users",    icon: <IconUsers    size={18} stroke={1.5} /> },
+  { label: "Profil",             href: "/dashboard/admin/profil",   icon: <IconUserCircle size={18} stroke={1.5} /> },
 ];
 
 interface SidebarProps {

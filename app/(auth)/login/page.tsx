@@ -29,7 +29,16 @@ export default function LoginPage() {
     setLoading(false);
 
     if (res?.error) {
-      setError("Email atau password salah.");
+      const errorMsg = res.error;
+      const errorCode = (res as any).code;
+
+      if (errorMsg === "PENDING" || errorCode === "PENDING" || errorMsg.includes("PENDING")) {
+        setError("Akun kamu sedang menunggu persetujuan admin. Silakan hubungi admin.");
+      } else if (errorMsg === "REJECT" || errorCode === "REJECT" || errorMsg.includes("REJECT")) {
+        setError("Akun kamu ditolak oleh admin. Silakan hubungi admin.");
+      } else {
+        setError("Email atau password salah.");
+      }
     } else {
       const session = await getSession();
       if (session?.user.role === "admin") {

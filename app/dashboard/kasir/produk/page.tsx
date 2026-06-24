@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { IconPhoto } from "@tabler/icons-react";
+import { IconPhoto, IconSearch, IconX } from "@tabler/icons-react";
 
 interface Category {
   _id:  string;
@@ -15,21 +15,19 @@ interface Product {
   description?: string;
   price:        number;
   image?:       string;
-  // category_id bisa null jika kategorinya sudah dihapus
   category_id:  { _id: string; name: string } | null;
 }
 
 const formatRupiah = (price: number) =>
   new Intl.NumberFormat("id-ID", {
-    style:                 "currency",
-    currency:              "IDR",
-    minimumFractionDigits: 0,
+    style: "currency", currency: "IDR", minimumFractionDigits: 0,
   }).format(price);
 
 export default function KasirProdukPage() {
   const [products,       setProducts]       = useState<Product[]>([]);
   const [categories,     setCategories]     = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState("semua");
+  const [search,         setSearch]         = useState("");
   const [loading,        setLoading]        = useState(true);
 
   useEffect(() => { fetchData(); }, []);
@@ -48,14 +46,14 @@ export default function KasirProdukPage() {
     }
   };
 
-  const filtered =
-    activeCategory === "semua"
-      ? products
-      : products.filter((p) => p.category_id?._id === activeCategory);
+  /* Filter kategori dulu, lalu filter nama */
+  const filtered = products
+    .filter((p) => activeCategory === "semua" || p.category_id?._id === activeCategory)
+    .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div>
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="mb-5">
         <h1 className="text-[18px] font-bold text-gray-900 leading-none">Katalog Produk</h1>
         <p className="text-[12px] text-gray-400 mt-1">
@@ -63,7 +61,32 @@ export default function KasirProdukPage() {
         </p>
       </div>
 
-      {/* ── Filter Kategori ── */}
+      {/* Search */}
+      <div className="relative mb-4">
+        <IconSearch
+          size={15}
+          stroke={2}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+        />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cari nama produk..."
+          className="w-full border-[1.5px] border-gray-200 rounded-lg pl-9 pr-4 py-2 text-[13px]
+                     text-gray-800 placeholder-gray-300 outline-none focus:border-green-400 transition-colors"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
+          >
+            <IconX size={14} stroke={2} />
+          </button>
+        )}
+      </div>
+
+      {/* Filter Kategori */}
       <div className="flex gap-2 flex-wrap mb-5">
         <button
           onClick={() => setActiveCategory("semua")}
@@ -90,21 +113,23 @@ export default function KasirProdukPage() {
         ))}
       </div>
 
-      {/* ── Loading ── */}
+      {/* Loading */}
       {loading && (
         <div className="flex justify-center items-center py-24">
           <div className="w-9 h-9 border-[3px] border-green-600 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
-      {/* ── Kosong ── */}
+      {/* Kosong */}
       {!loading && filtered.length === 0 && (
         <div className="text-center py-24">
-          <p className="text-gray-400 text-sm font-medium">Belum ada produk tersedia.</p>
+          <p className="text-gray-400 text-sm font-medium">
+            {search ? `Tidak ada produk dengan nama "${search}".` : "Belum ada produk tersedia."}
+          </p>
         </div>
       )}
 
-      {/* ── Grid Produk ── */}
+      {/* Grid Produk */}
       {!loading && filtered.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {filtered.map((product) => (
@@ -112,7 +137,6 @@ export default function KasirProdukPage() {
               key={product._id}
               className="bg-white rounded-xl border-[1.5px] border-gray-200 overflow-hidden"
             >
-              {/* Gambar */}
               <div className="relative w-full aspect-square bg-[#f0fdf4]">
                 {product.image ? (
                   <Image
@@ -128,10 +152,7 @@ export default function KasirProdukPage() {
                   </div>
                 )}
               </div>
-
-              {/* Info */}
               <div className="p-3">
-                {/* Pakai optional chaining ?. — kalau null tampil "Tanpa Kategori" */}
                 <p className="text-[11px] font-bold text-green-600 uppercase tracking-wide mb-1">
                   {product.category_id?.name ?? "Tanpa Kategori"}
                 </p>

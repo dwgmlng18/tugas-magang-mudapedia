@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { IconChevronDown, IconLogout } from "@tabler/icons-react";
 
@@ -14,18 +14,25 @@ interface NavbarProps {
 const pageTitles: Record<string, { title: string; sub: string }> = {
   "/dashboard/kasir/produk":    { title: "Katalog Produk",     sub: "Daftar semua produk"    },
   "/dashboard/kasir/transaksi": { title: "Transaksi",          sub: "Riwayat transaksi"      },
+  "/dashboard/kasir/profil":    { title: "Profil",             sub: "Kelola informasi akun"  },
   "/dashboard/admin/kategori":  { title: "Manajemen Kategori", sub: "Kelola kategori produk" },
   "/dashboard/admin/produk":    { title: "Manajemen Produk",   sub: "Tambah dan edit produk" },
   "/dashboard/admin/laporan":   { title: "Laporan Transaksi",  sub: "Rekap penjualan"        },
   "/dashboard/admin/users":     { title: "Manajemen Users",    sub: "Kelola akun pengguna"   },
+  "/dashboard/admin/profil":    { title: "Profil",             sub: "Kelola informasi akun"  },
 };
 
-export default function Navbar({ name, email, role }: NavbarProps) {
+export default function Navbar({ name: initialName, email: initialEmail, role }: NavbarProps) {
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
   const page = pageTitles[pathname] ?? { title: "Dashboard", sub: "Selamat datang" };
+
+  const name = session?.user?.name ?? initialName;
+  const email = session?.user?.email ?? initialEmail;
+  const image = session?.user?.image ?? null;
 
   const initials = (name ?? email ?? "?")
     .split(" ")
@@ -61,8 +68,12 @@ export default function Navbar({ name, email, role }: NavbarProps) {
             className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border-[1.5px] border-green-100
                        hover:bg-green-50 hover:border-green-200 transition-colors"
           >
-            <div className="w-[30px] h-[30px] rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-[11px] font-bold">{initials}</span>
+            <div className="w-[30px] h-[30px] rounded-full bg-green-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {image ? (
+                <img src={image} alt={name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white text-[11px] font-bold">{initials}</span>
+              )}
             </div>
             <div className="text-left">
               <p className="text-[12px] font-semibold text-gray-800 leading-none">{name || email}</p>
@@ -78,8 +89,12 @@ export default function Navbar({ name, email, role }: NavbarProps) {
             <div className="absolute right-0 top-[calc(100%+8px)] w-52 bg-white border-[1.5px] border-green-100 rounded-xl z-50 p-3 shadow-sm">
               {/* User info */}
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-[13px] font-bold">{initials}</span>
+                <div className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {image ? (
+                    <img src={image} alt={name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-white text-[13px] font-bold">{initials}</span>
+                  )}
                 </div>
                 <div className="min-w-0">
                   <p className="text-[13px] font-semibold text-gray-900 truncate">{name || "-"}</p>
