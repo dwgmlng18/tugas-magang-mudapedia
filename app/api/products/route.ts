@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ products, categories });
   } catch (error) {
+    console.error("GET /api/products error:", error);
     return NextResponse.json(
       { message: "Gagal mengambil data" },
       { status: 500 }

@@ -3,23 +3,33 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  IconLayoutGrid,
+  IconReceipt,
+  IconTag,
+  IconBox,
+  IconChartBar,
+  IconUsers,
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
+} from "@tabler/icons-react";
 
 interface NavItem {
   label: string;
-  href: string;
-  icon: string; // nama class Tabler Icon
+  href:  string;
+  icon:  React.ReactNode;
 }
 
 const kasirMenu: NavItem[] = [
-  { label: "Katalog Produk", href: "/dashboard/kasir/produk",   icon: "ti-layout-grid" },
-  { label: "Transaksi",      href: "/dashboard/kasir/transaksi", icon: "ti-receipt"     },
+  { label: "Katalog Produk", href: "/dashboard/kasir/produk",    icon: <IconLayoutGrid  size={18} stroke={1.5} /> },
+  { label: "Transaksi",      href: "/dashboard/kasir/transaksi", icon: <IconReceipt     size={18} stroke={1.5} /> },
 ];
 
 const adminMenu: NavItem[] = [
-  { label: "Manajemen Kategori",  href: "/dashboard/admin/kategori",  icon: "ti-tag"       },
-  { label: "Manajemen Produk",    href: "/dashboard/admin/produk",    icon: "ti-box"       },
-  { label: "Laporan Transaksi",   href: "/dashboard/admin/laporan",   icon: "ti-chart-bar" },
-  { label: "Manajemen Users",     href: "/dashboard/admin/users",     icon: "ti-users"     },
+  { label: "Manajemen Kategori", href: "/dashboard/admin/kategori", icon: <IconTag      size={18} stroke={1.5} /> },
+  { label: "Manajemen Produk",   href: "/dashboard/admin/produk",   icon: <IconBox      size={18} stroke={1.5} /> },
+  { label: "Laporan Transaksi",  href: "/dashboard/admin/laporan",  icon: <IconChartBar size={18} stroke={1.5} /> },
+  { label: "Manajemen Users",    href: "/dashboard/admin/users",    icon: <IconUsers    size={18} stroke={1.5} /> },
 ];
 
 interface SidebarProps {
@@ -30,84 +40,131 @@ export default function Sidebar({ role }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
-  const menu = role === "admin" ? adminMenu : kasirMenu;
-  const sectionLabel = role === "admin" ? "Admin" : "Kasir";
+  const menu         = role === "admin" ? adminMenu : kasirMenu;
+  const sectionLabel = role === "admin" ? "Admin"   : "Kasir";
 
   return (
     <aside
       className={`
-        flex flex-col bg-white border-r border-green-100 transition-all duration-200 ease-in-out
+        relative flex flex-col bg-white border-r border-green-100
+        transition-[width] duration-200 ease-in-out flex-shrink-0
         ${collapsed ? "w-14" : "w-56"}
       `}
       style={{ minHeight: "100vh" }}
     >
-      {/* Logo */}
-      <div className="h-14 flex items-center gap-2.5 px-3.5 border-b border-green-100 overflow-hidden flex-shrink-0">
-        <div className="w-7 h-7 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-[13px] font-medium">C</span>
+      {/* ── Logo row ── */}
+      <div className="h-14 flex items-center gap-2.5 px-3 border-b border-green-100 overflow-hidden flex-shrink-0">
+        {/* Logo mark */}
+        <div className="w-8 h-8 bg-green-600 rounded-[9px] flex items-center justify-center flex-shrink-0">
+          <span className="text-white text-[14px] font-bold">C</span>
         </div>
+
+        {/* App name — hidden when collapsed */}
         {!collapsed && (
-          <span className="text-[14px] font-medium text-green-800 whitespace-nowrap">
-            Caelas
-          </span>
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <div className="text-[15px] font-bold text-green-900 whitespace-nowrap leading-none">
+              Caelas
+            </div>
+            <div className="text-[10px] text-green-300 whitespace-nowrap leading-none mt-0.5">
+              Sistem Kasir
+            </div>
+          </div>
+        )}
+
+        {/* Toggle collapse — visible only when expanded */}
+        {!collapsed && (
+          <button
+            onClick={() => setCollapsed(true)}
+            title="Tutup sidebar"
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-green-100
+                       hover:bg-green-50 hover:border-green-200 transition-colors flex-shrink-0 text-gray-400"
+          >
+            <IconLayoutSidebarLeftCollapse size={17} stroke={1.5} />
+          </button>
         )}
       </div>
 
-      {/* Menu */}
+      {/* ── Re-open button — shown only when collapsed ── */}
+      {collapsed && (
+        <div className="flex justify-center py-2 border-b border-green-100">
+          <button
+            onClick={() => setCollapsed(false)}
+            title="Buka sidebar"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-green-100
+                       hover:bg-green-50 hover:border-green-200 transition-colors text-green-600"
+          >
+            <IconLayoutSidebarLeftExpand size={18} stroke={1.5} />
+          </button>
+        </div>
+      )}
+
+      {/* ── Menu ── */}
       <nav className="flex-1 py-3">
+        {/* Section label */}
         {!collapsed && (
-          <p className="text-[10px] font-medium text-green-300 uppercase tracking-widest px-3.5 mb-1.5">
+          <p className="text-[10px] font-bold text-green-200 uppercase tracking-[.1em] px-3.5 mb-2 whitespace-nowrap overflow-hidden">
             {sectionLabel}
           </p>
         )}
+
         {menu.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              title={collapsed ? item.label : undefined}
+              title={item.label}
               className={`
-                relative flex items-center gap-2.5 px-3.5 py-2.5 transition-colors
+                group relative flex items-center gap-2.5 px-3.5 py-[9px] transition-colors
                 ${isActive
-                  ? "bg-green-50 text-green-700"
+                  ? "bg-green-100 text-green-700"
                   : "text-gray-500 hover:bg-green-50 hover:text-green-700"
                 }
               `}
             >
+              {/* Active bar */}
               {isActive && (
-                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-green-600 rounded-r-sm" />
+                <span className="absolute left-0 top-[5px] bottom-[5px] w-[3px] bg-green-600 rounded-r-[3px]" />
               )}
-              <i
-                className={`ti ${item.icon} text-[18px] flex-shrink-0 ${
-                  isActive ? "text-green-600" : "text-gray-400"
+
+              {/* Icon */}
+              <span
+                className={`flex-shrink-0 ${
+                  isActive ? "text-green-600" : "text-gray-400 group-hover:text-green-500"
                 }`}
-                aria-hidden="true"
-              />
+              >
+                {item.icon}
+              </span>
+
+              {/* Label */}
               {!collapsed && (
-                <span className={`text-[13px] whitespace-nowrap ${isActive ? "font-medium" : ""}`}>
+                <span
+                  className={`text-[13px] whitespace-nowrap ${
+                    isActive ? "font-semibold text-green-700" : "text-gray-500"
+                  }`}
+                >
                   {item.label}
+                </span>
+              )}
+
+              {/* Floating tooltip when collapsed */}
+              {collapsed && (
+                <span
+                  className="
+                    pointer-events-none absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2
+                    bg-gray-800 text-white text-[12px] px-2.5 py-1 rounded-md whitespace-nowrap
+                    opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-50
+                  "
+                  role="tooltip"
+                >
+                  {item.label}
+                  <span className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-gray-800" />
                 </span>
               )}
             </Link>
           );
         })}
       </nav>
-
-      {/* Toggle */}
-      <button
-        onClick={() => setCollapsed((prev) => !prev)}
-        className="flex items-center gap-2.5 px-3.5 py-3 border-t border-green-100 text-gray-400 hover:bg-green-50 hover:text-green-600 transition-colors"
-        title={collapsed ? "Buka sidebar" : "Tutup sidebar"}
-      >
-        <i
-          className={`ti ${collapsed ? "ti-layout-sidebar-left-expand" : "ti-layout-sidebar-left-collapse"} text-[18px]`}
-          aria-hidden="true"
-        />
-        {!collapsed && (
-          <span className="text-[13px] whitespace-nowrap">Tutup sidebar</span>
-        )}
-      </button>
     </aside>
   );
 }
