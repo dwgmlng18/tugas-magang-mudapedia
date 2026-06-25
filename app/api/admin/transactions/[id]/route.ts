@@ -28,28 +28,33 @@ export async function GET(
     }
 
     // Ambil profile kasir
-    const cashier = transaction.cashier_id as { _id: unknown; email: string } | null;
+    const cashier = transaction.cashier_id as unknown as { _id: any; email: string } | null;
     const profile = cashier
       ? await Profile.findOne({ user_id: cashier._id }).select("name image").lean()
       : null;
 
     // Ambil detail item, populate nama produk
     const details = await TransactionDetail.find({ transaction_id: id })
-      .populate("product_id", "name image")
+      .populate("product_id", "name image status")
       .lean();
 
     const items = details.map((d) => {
-      const product = d.product_id as { _id: unknown; name: string; image?: string } | null;
+      const product = d.product_id as unknown as { _id: unknown; name: string; image?: string; status?: string } | null;
+      const isSoftDeleted = product?.status === "deleted";
+      const isPermanentlyDeleted = !product;
+
       return {
         _id:      d._id,
         product: {
           _id:   product?._id ?? null,
-          name:  product?.name ?? "Produk dihapus",
+          name:  product?.name ?? d.product_name ?? "Produk dihapus",
           image: product?.image ?? null,
         },
         quantity: d.quantity,
         price:    d.price,
         subtotal: d.subtotal,
+        deleted:  isSoftDeleted || isPermanentlyDeleted,
+        isPermanent: isPermanentlyDeleted,
       };
     });
 

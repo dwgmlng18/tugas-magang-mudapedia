@@ -3,6 +3,7 @@ import connectDB from "@/lib/mongodb";
 import Transaction from "@/models/Transaction";
 import TransactionDetail from "@/models/TransactionDetail";
 import Profile from "@/models/Profile";
+import Product from "@/models/Product";
 import { auth } from "@/lib/auth";
 
 /* GET /api/kasir/transactions */
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
     const { items } = body as {
       items: {
         product_id: string;
-        product_name: string;
+        product_name?: string;
         quantity: number;
         price: number;
         subtotal: number;
@@ -65,6 +66,11 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Resolve product_name if missing from payload
+    const productIds = items.map((i) => i.product_id).filter(Boolean);
+    const productsList = await Product.find({ _id: { $in: productIds } }).select("name").lean();
+    const productMap = new Map(productsList.map((p) => [p._id.toString(), p.name]));
 
     const total_items = items.reduce((sum, i) => sum + i.quantity, 0);
     const total_price = items.reduce((sum, i) => sum + i.subtotal, 0);
@@ -79,7 +85,7 @@ export async function POST(req: NextRequest) {
       items.map((i) => ({
         transaction_id: transaction._id,
         product_id:     i.product_id || null,
-        product_name:   i.product_name,
+        product_name:   i.product_name || (i.product_id ? productMap.get(i.product_id.toString()) : undefined) || "Produk",
         quantity:       i.quantity,
         price:          i.price,
         subtotal:       i.subtotal,

@@ -51,24 +51,29 @@ export default function EditTransaksiPage() {
 
       if (trxData.transaction?.items) {
         setCart(
-          trxData.transaction.items.map((item: {
-            product_id: string | null;
-            name: string;
-            price: number;
-            image?: string;
-            quantity: number;
-            subtotal: number;
-            deleted?: boolean;
-          }) => ({
-            product_id:   item.product_id,
-            product_name: item.name,
-            name:         item.name,
-            price:        item.price,
-            image:        item.image,
-            quantity:     item.quantity,
-            subtotal:     item.subtotal,
-            deleted:      item.deleted ?? false,
-          }))
+          trxData.transaction.items
+            .filter((item: {
+              product_id: string | null;
+              isPermanent?: boolean;
+            }) => !item.isPermanent && item.product_id !== null)
+            .map((item: {
+              product_id: string | null;
+              name: string;
+              price: number;
+              image?: string;
+              quantity: number;
+              subtotal: number;
+              deleted?: boolean;
+            }) => ({
+              product_id:   item.product_id,
+              product_name: item.name,
+              name:         item.name,
+              price:        item.price,
+              image:        item.image,
+              quantity:     item.quantity,
+              subtotal:     item.subtotal,
+              deleted:      item.deleted ?? false,
+            }))
         );
       }
     }).catch(console.error)

@@ -38,10 +38,10 @@ export async function GET(req: NextRequest) {
 
     // Ambil semua profile sekaligus berdasarkan cashier_id yang ada
     const cashierIds = transactions
-      .map((t) => (t.cashier_id as { _id: unknown })?._id)
+      .map((t) => (t.cashier_id as unknown as { _id: unknown })?._id)
       .filter(Boolean);
 
-    const profiles = await Profile.find({ user_id: { $in: cashierIds } })
+    const profiles = await Profile.find({ user_id: { $in: cashierIds as any[] } })
       .select("user_id name image")
       .lean();
 
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
     // Gabungkan nama kasir ke setiap transaksi
     const result = transactions.map((t) => {
-      const cashier = t.cashier_id as { _id: unknown; email: string } | null;
+      const cashier = t.cashier_id as unknown as { _id: any; email: string } | null;
       const profile = cashier
         ? profileMap.get(cashier._id.toString())
         : null;

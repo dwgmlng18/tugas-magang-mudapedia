@@ -103,10 +103,11 @@ export default function TambahTransaksiPage() {
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           items: cart.map((c) => ({
-            product_id: c.product_id,
-            quantity:   c.quantity,
-            price:      c.price,
-            subtotal:   c.subtotal,
+            product_id:   c.product_id,
+            product_name: c.name,
+            quantity:     c.quantity,
+            price:        c.price,
+            subtotal:     c.subtotal,
           })),
         }),
       });

@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface ITransactionDetail extends Document {
   transaction_id: mongoose.Types.ObjectId;
   product_id: mongoose.Types.ObjectId;
+  product_name?: string;
   quantity: number;
   price: number;
   subtotal: number;
@@ -19,6 +20,10 @@ const TransactionDetailSchema = new Schema<ITransactionDetail>(
       type: Schema.Types.ObjectId,
       ref: "Product",
       required: true,
+    },
+    product_name: {
+      type: String,
+      required: false,
     },
     quantity: {
       type: Number,
