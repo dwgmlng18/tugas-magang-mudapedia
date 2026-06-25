@@ -6,7 +6,7 @@ export interface IProduct extends Document {
   image?: string;
   description?: string;
   price: number;
-  status: "active" | "inactive";
+  status: "active" | "inactive" | "deleted";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,7 +37,7 @@ const ProductSchema = new Schema<IProduct>(
     },
     status: {
       type: String,
-      enum: ["active", "inactive"],
+      enum: ["active", "inactive", "deleted"],
       default: "active",
     },
   },

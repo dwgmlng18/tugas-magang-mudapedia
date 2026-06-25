@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
-  IconPlus, IconEdit, IconTrash, IconX, IconCheck, IconPhoto, IconUpload, IconSearch,
+  IconPlus, IconEdit, IconTrash, IconX, IconCheck, IconPhoto,
+  IconUpload, IconSearch, IconRefresh, IconAlertTriangle,
 } from "@tabler/icons-react";
 
 interface Category {
@@ -17,10 +18,12 @@ interface Product {
   description?: string;
   price:        number;
   image?:       string;
-  status:       "active" | "inactive";
+  status:       "active" | "inactive" | "deleted";
   category_id:  { _id: string; name: string } | null;
   createdAt:    string;
 }
+
+type Tab = "products" | "trash";
 
 const formatRupiah = (price: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -28,7 +31,9 @@ const formatRupiah = (price: number) =>
   }).format(price);
 
 export default function AdminProdukPage() {
+  const [tab,            setTab]            = useState<Tab>("products");
   const [products,       setProducts]       = useState<Product[]>([]);
+  const [trash,          setTrash]          = useState<Product[]>([]);
   const [categories,     setCategories]     = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState("semua");
   const [search,         setSearch]         = useState("");
@@ -47,15 +52,28 @@ export default function AdminProdukPage() {
   const [formImagePreview, setFormImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { fetchData(); }, []);
+  /* Confirm dialog */
+  const [confirm, setConfirm] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    variant: "warning" | "danger";
+    onOk: () => void;
+  }>({ open: false, title: "", message: "", variant: "warning", onOk: () => {} });
 
+  /* ── Fetch ─────────────────────────────────────────────────────── */
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res  = await fetch("/api/admin/products");
-      const data = await res.json();
-      setProducts(data.products);
-      setCategories(data.categories);
+      const [resMain, resTrash] = await Promise.all([
+        fetch("/api/admin/products"),
+        fetch("/api/admin/products?tab=trash"),
+      ]);
+      const dataMain  = await resMain.json();
+      const dataTrash = await resTrash.json();
+      setProducts(dataMain.products   ?? []);
+      setTrash(dataTrash.products     ?? []);
+      setCategories(dataMain.categories ?? []);
     } catch {
       console.error("Gagal fetch produk");
     } finally {
@@ -63,11 +81,15 @@ export default function AdminProdukPage() {
     }
   };
 
-  /* Filter kategori dulu, lalu filter nama */
-  const filtered = products
-    .filter((p) => activeCategory === "semua" || p.category_id?._id === activeCategory)
+  useEffect(() => { fetchData(); }, []);
+
+  /* ── Filter ─────────────────────────────────────────────────────── */
+  const sourceList = tab === "trash" ? trash : products;
+  const filtered = sourceList
+    .filter((p) => tab === "trash" || activeCategory === "semua" || p.category_id?._id === activeCategory)
     .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
+  /* ── Form helpers ───────────────────────────────────────────────── */
   const resetForm = () => {
     setFormName(""); setFormCategory(categories[0]?._id ?? "");
     setFormPrice(""); setFormDesc(""); setFormStatus("active");
@@ -82,7 +104,7 @@ export default function AdminProdukPage() {
     setFormCategory(product.category_id?._id ?? "");
     setFormPrice(String(product.price));
     setFormDesc(product.description ?? "");
-    setFormStatus(product.status);
+    setFormStatus(product.status === "inactive" ? "inactive" : "active");
     setFormImageFile(null);
     setFormImagePreview(product.image ?? null);
     setError("");
@@ -129,17 +151,57 @@ export default function AdminProdukPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Hapus produk ini? Data transaksi yang sudah ada tidak akan terpengaruh.")) return;
-    try {
-      const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
-      if (!res.ok) return;
-      setProducts((prev) => prev.filter((p) => p._id !== id));
-    } catch {
-      console.error("Gagal hapus produk");
-    }
+  /* ── Soft Delete ────────────────────────────────────────────────── */
+  const handleDelete = (product: Product) => {
+    setConfirm({
+      open: true,
+      title: "Hapus Produk",
+      message: `"${product.name}" akan dipindahkan ke sampah. Bisa dipulihkan nanti.`,
+      variant: "warning",
+      onOk: async () => {
+        setConfirm((c) => ({ ...c, open: false }));
+        const res = await fetch(`/api/admin/products/${product._id}`, { method: "DELETE" });
+        if (res.ok) fetchData();
+      },
+    });
   };
 
+  /* ── Restore ────────────────────────────────────────────────────── */
+  const handleRestore = (product: Product) => {
+    setConfirm({
+      open: true,
+      title: "Pulihkan Produk",
+      message: `"${product.name}" akan dipulihkan dan kembali aktif.`,
+      variant: "warning",
+      onOk: async () => {
+        setConfirm((c) => ({ ...c, open: false }));
+        const res = await fetch(`/api/admin/products/${product._id}/restore`, { method: "PATCH" });
+        if (!res.ok) {
+          const d = await res.json();
+          alert(d.message ?? "Gagal memulihkan.");
+          return;
+        }
+        fetchData();
+      },
+    });
+  };
+
+  /* ── Permanent Delete ───────────────────────────────────────────── */
+  const handlePermanent = (product: Product) => {
+    setConfirm({
+      open: true,
+      title: "Hapus Permanen",
+      message: `"${product.name}" akan dihapus PERMANEN dari database dan tidak bisa dipulihkan.`,
+      variant: "danger",
+      onOk: async () => {
+        setConfirm((c) => ({ ...c, open: false }));
+        const res = await fetch(`/api/admin/products/${product._id}/permanent`, { method: "DELETE" });
+        if (res.ok) fetchData();
+      },
+    });
+  };
+
+  /* ── Render ─────────────────────────────────────────────────────── */
   return (
     <div>
       {/* Header */}
@@ -150,28 +212,48 @@ export default function AdminProdukPage() {
             {loading ? "Memuat..." : `${filtered.length} produk ditampilkan`}
           </p>
         </div>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white
-                     text-[13px] font-semibold px-4 py-2 rounded-lg transition-colors"
-        >
-          <IconPlus size={16} stroke={2} />
-          Tambah Produk
-        </button>
+        {tab === "products" && (
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white
+                       text-[13px] font-semibold px-4 py-2 rounded-lg transition-colors"
+          >
+            <IconPlus size={16} stroke={2} />
+            Tambah Produk
+          </button>
+        )}
+      </div>
+
+      {/* Tab */}
+      <div className="flex gap-1 mb-5 border-b border-gray-200">
+        {(["products", "trash"] as Tab[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => { setTab(t); setSearch(""); setActiveCategory("semua"); }}
+            className={`px-5 py-2.5 text-[13px] font-semibold border-b-2 -mb-px transition-colors ${
+              tab === t
+                ? "border-green-600 text-green-700"
+                : "border-transparent text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            {t === "products"
+              ? `Produk (${products.length})`
+              : `Sampah (${trash.length})`}
+          </button>
+        ))}
       </div>
 
       {/* Search */}
       <div className="relative mb-4">
         <IconSearch
-          size={15}
-          stroke={2}
+          size={15} stroke={2}
           className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
         />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cari nama produk..."
+          placeholder={tab === "trash" ? "Cari nama produk di sampah..." : "Cari nama produk..."}
           className="w-full border-[1.5px] border-gray-200 rounded-lg pl-9 pr-4 py-2 text-[13px]
                      text-gray-800 placeholder-gray-300 outline-none focus:border-green-400 transition-colors"
         />
@@ -185,32 +267,45 @@ export default function AdminProdukPage() {
         )}
       </div>
 
-      {/* Filter Kategori */}
-      <div className="flex gap-2 flex-wrap mb-5">
-        <button
-          onClick={() => setActiveCategory("semua")}
-          className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold border-[1.5px] transition-all ${
-            activeCategory === "semua"
-              ? "bg-green-600 text-white border-green-600"
-              : "bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-600"
-          }`}
-        >
-          Semua
-        </button>
-        {categories.map((cat) => (
+      {/* Filter Kategori — hanya tampil di tab produk */}
+      {tab === "products" && (
+        <div className="flex gap-2 flex-wrap mb-5">
           <button
-            key={cat._id}
-            onClick={() => setActiveCategory(cat._id)}
+            onClick={() => setActiveCategory("semua")}
             className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold border-[1.5px] transition-all ${
-              activeCategory === cat._id
+              activeCategory === "semua"
                 ? "bg-green-600 text-white border-green-600"
                 : "bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-600"
             }`}
           >
-            {cat.name}
+            Semua
           </button>
-        ))}
-      </div>
+          {categories.map((cat) => (
+            <button
+              key={cat._id}
+              onClick={() => setActiveCategory(cat._id)}
+              className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold border-[1.5px] transition-all ${
+                activeCategory === cat._id
+                  ? "bg-green-600 text-white border-green-600"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-600"
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Info sampah */}
+      {tab === "trash" && !loading && (
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-5 text-[12px] text-amber-700">
+          <IconAlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+          <span>
+            Produk di sini tidak tampil di menu maupun kasir. Pulihkan untuk mengaktifkan kembali,
+            atau hapus permanen untuk menghapus selamanya.
+          </span>
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
@@ -223,33 +318,50 @@ export default function AdminProdukPage() {
       {!loading && filtered.length === 0 && (
         <div className="text-center py-24">
           <p className="text-gray-400 text-sm font-medium">
-            {search ? `Tidak ada produk dengan nama "${search}".` : "Belum ada produk."}
+            {tab === "trash"
+              ? "Sampah kosong."
+              : search
+              ? `Tidak ada produk dengan nama "${search}".`
+              : "Belum ada produk."}
           </p>
         </div>
       )}
 
-      {/* Grid Produk */}
+      {/* ── Grid Produk ─────────────────────────────────────────────── */}
       {!loading && filtered.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {filtered.map((product) => (
-            <div key={product._id} className="bg-white rounded-xl border-[1.5px] border-gray-200 overflow-hidden flex flex-col">
+            <div
+              key={product._id}
+              className={`bg-white rounded-xl border-[1.5px] overflow-hidden flex flex-col ${
+                tab === "trash" ? "border-red-100" : "border-gray-200"
+              }`}
+            >
+              {/* Gambar */}
               <div className="relative w-full aspect-square bg-[#f0fdf4]">
                 {product.image ? (
-                  <Image src={product.image} alt={product.name} fill className="object-cover"
-                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw" />
+                  <Image
+                    src={product.image} alt={product.name} fill className="object-cover"
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <IconPhoto size={40} stroke={1} className="text-green-200" />
                   </div>
                 )}
+                {/* Badge status */}
                 <span className={`absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                   product.status === "active"
                     ? "bg-green-50 text-green-700 border-green-200"
-                    : "bg-gray-100 text-gray-500 border-gray-200"
+                    : product.status === "inactive"
+                    ? "bg-gray-100 text-gray-500 border-gray-200"
+                    : "bg-red-50 text-red-500 border-red-200"
                 }`}>
-                  {product.status === "active" ? "Aktif" : "Nonaktif"}
+                  {product.status === "active" ? "Aktif" : product.status === "inactive" ? "Nonaktif" : "Dihapus"}
                 </span>
               </div>
+
+              {/* Info */}
               <div className="p-3 flex flex-col flex-1">
                 <p className="text-[11px] font-bold text-green-600 uppercase tracking-wide mb-0.5">
                   {product.category_id?.name ?? "Tanpa Kategori"}
@@ -265,27 +377,54 @@ export default function AdminProdukPage() {
                 <p className="text-[15px] font-extrabold text-green-600 mt-auto mb-3">
                   {formatRupiah(product.price)}
                 </p>
-                <div className="flex gap-1.5">
-                  <button onClick={() => openEdit(product)}
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg
-                               border border-gray-200 hover:bg-green-50 hover:border-green-300
-                               text-gray-400 hover:text-green-600 transition-colors text-[12px] font-semibold">
-                    <IconEdit size={14} stroke={2} /> Edit
-                  </button>
-                  <button onClick={() => handleDelete(product._id)}
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg
-                               border border-gray-200 hover:bg-red-50 hover:border-red-300
-                               text-gray-400 hover:text-red-500 transition-colors text-[12px] font-semibold">
-                    <IconTrash size={14} stroke={2} /> Hapus
-                  </button>
-                </div>
+
+                {/* Tombol — berbeda antara tab Produk dan Sampah */}
+                {tab === "products" ? (
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => openEdit(product)}
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg
+                                 border border-gray-200 hover:bg-green-50 hover:border-green-300
+                                 text-gray-400 hover:text-green-600 transition-colors text-[12px] font-semibold"
+                    >
+                      <IconEdit size={14} stroke={2} /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(product)}
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg
+                                 border border-gray-200 hover:bg-red-50 hover:border-red-300
+                                 text-gray-400 hover:text-red-500 transition-colors text-[12px] font-semibold"
+                    >
+                      <IconTrash size={14} stroke={2} /> Hapus
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      onClick={() => handleRestore(product)}
+                      className="w-full flex items-center justify-center gap-1 py-1.5 rounded-lg
+                                 border border-gray-200 hover:bg-green-50 hover:border-green-300
+                                 text-gray-400 hover:text-green-600 transition-colors text-[12px] font-semibold"
+                    >
+                      <IconRefresh size={14} stroke={2} /> Pulihkan
+                    </button>
+                    <button
+                      onClick={() => handlePermanent(product)}
+                      className="w-full flex items-center justify-center gap-1 py-1.5 rounded-lg
+                                 border border-red-200 hover:bg-red-50
+                                 text-red-400 hover:text-red-600 transition-colors text-[12px] font-semibold"
+                    >
+                      <IconTrash size={14} stroke={2} /> Hapus Permanen
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Modal Tambah / Edit */}
+      {/* ── Modal Tambah / Edit ──────────────────────────────────────── */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-md mx-4 p-6 max-h-[90vh] overflow-y-auto">
@@ -293,8 +432,10 @@ export default function AdminProdukPage() {
               <h2 className="text-[16px] font-bold text-gray-900">
                 {editTarget ? "Edit Produk" : "Tambah Produk"}
               </h2>
-              <button onClick={() => setModalOpen(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-400">
+              <button
+                onClick={() => setModalOpen(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-400"
+              >
                 <IconX size={16} stroke={2} />
               </button>
             </div>
@@ -318,11 +459,12 @@ export default function AdminProdukPage() {
                   </div>
                 )}
               </div>
-              <input ref={fileInputRef} type="file" accept="image/*"
-                onChange={handleImageChange} className="hidden" />
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
               {formImagePreview && (
-                <button onClick={() => { setFormImageFile(null); setFormImagePreview(null); }}
-                  className="mt-1.5 text-[11px] text-red-400 hover:text-red-600 font-medium">
+                <button
+                  onClick={() => { setFormImageFile(null); setFormImagePreview(null); }}
+                  className="mt-1.5 text-[11px] text-red-400 hover:text-red-600 font-medium"
+                >
                   Hapus gambar
                 </button>
               )}
@@ -381,21 +523,25 @@ export default function AdminProdukPage() {
             <div className="mb-5">
               <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">Status</label>
               <div className="flex gap-2">
-                <button onClick={() => setFormStatus("active")}
+                <button
+                  onClick={() => setFormStatus("active")}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border-[1.5px] text-[13px] font-semibold transition-colors ${
                     formStatus === "active"
                       ? "bg-green-50 border-green-400 text-green-700"
                       : "bg-white border-gray-200 text-gray-400 hover:border-gray-300"
-                  }`}>
+                  }`}
+                >
                   <span className={`w-2 h-2 rounded-full ${formStatus === "active" ? "bg-green-500" : "bg-gray-300"}`} />
                   Aktif
                 </button>
-                <button onClick={() => setFormStatus("inactive")}
+                <button
+                  onClick={() => setFormStatus("inactive")}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border-[1.5px] text-[13px] font-semibold transition-colors ${
                     formStatus === "inactive"
                       ? "bg-gray-100 border-gray-400 text-gray-700"
                       : "bg-white border-gray-200 text-gray-400 hover:border-gray-300"
-                  }`}>
+                  }`}
+                >
                   <span className={`w-2 h-2 rounded-full ${formStatus === "inactive" ? "bg-gray-500" : "bg-gray-300"}`} />
                   Nonaktif
                 </button>
@@ -419,6 +565,40 @@ export default function AdminProdukPage() {
                 ) : (
                   <><IconCheck size={15} stroke={2} /> Simpan</>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm Dialog ───────────────────────────────────────────── */}
+      {confirm.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${
+              confirm.variant === "danger" ? "bg-red-100" : "bg-amber-100"
+            }`}>
+              <IconAlertTriangle size={22} className={confirm.variant === "danger" ? "text-red-500" : "text-amber-500"} />
+            </div>
+            <h3 className="text-[16px] font-bold text-gray-900 text-center mb-2">{confirm.title}</h3>
+            <p className="text-[13px] text-gray-500 text-center mb-6">{confirm.message}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirm((c) => ({ ...c, open: false }))}
+                className="flex-1 py-2 rounded-lg border-[1.5px] border-gray-200 text-[13px]
+                           font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirm.onOk}
+                className={`flex-1 py-2 rounded-lg text-white text-[13px] font-semibold transition-colors ${
+                  confirm.variant === "danger"
+                    ? "bg-red-500 hover:bg-red-600"
+                    : "bg-amber-500 hover:bg-amber-600"
+                }`}
+              >
+                Ya, Lanjutkan
               </button>
             </div>
           </div>

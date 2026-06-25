@@ -4,7 +4,6 @@ import Product from "@/models/Product";
 import { uploadToCloudinary, deleteFromCloudinary } from "@/lib/cloudinary";
 import mongoose from "mongoose";
 
-/* PUT /api/admin/products/[id] — edit produk (FormData karena bisa ganti gambar) */
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -25,7 +24,6 @@ export async function PUT(
     const status      = formData.get("status")      as string | null;
     const imageFile   = formData.get("image")       as File   | null;
 
-    // Validasi
     if (!name?.trim()) {
       return NextResponse.json({ message: "Nama produk tidak boleh kosong." }, { status: 400 });
     }
@@ -39,25 +37,27 @@ export async function PUT(
       return NextResponse.json({ message: "Status tidak valid." }, { status: 400 });
     }
 
-    // Ambil produk lama untuk cek gambar existing
     const existing = await Product.findById(id);
     if (!existing) {
       return NextResponse.json({ message: "Produk tidak ditemukan." }, { status: 404 });
     }
+    // Tolak edit produk yang sudah deleted
+    if (existing.status === "deleted") {
+      return NextResponse.json({ message: "Produk yang sudah dihapus tidak dapat diedit." }, { status: 409 });
+    }
 
-    // Cek duplikat nama HANYA jika nama berubah (case-insensitive)
     const nameChanged = name.trim().toLowerCase() !== existing.name.toLowerCase();
     if (nameChanged) {
       const duplicate = await Product.findOne({
-        _id:  { $ne: id },
-        name: { $regex: new RegExp(`^${name.trim()}$`, "i") },
+        _id:    { $ne: id },
+        name:   { $regex: new RegExp(`^${name.trim()}$`, "i") },
+        status: { $ne: "deleted" },
       });
       if (duplicate) {
         return NextResponse.json({ message: "Nama produk sudah digunakan." }, { status: 409 });
       }
     }
 
-    // Siapkan data update
     const update: Record<string, unknown> = {
       name:        name.trim(),
       category_id,
@@ -66,7 +66,6 @@ export async function PUT(
       status:      status ?? existing.status,
     };
 
-    // Jika ada gambar baru → hapus gambar lama dari Cloudinary, upload yang baru
     if (imageFile && imageFile.size > 0) {
       if (existing.image) {
         await deleteFromCloudinary(existing.image);
@@ -86,8 +85,11 @@ export async function PUT(
   }
 }
 
-/* DELETE /api/admin/products/[id] — hapus produk
-   TransactionDetail TIDAK disentuh — data transaksi lama tetap aman */
+/**
+ * DELETE /api/admin/products/[id]
+ * SOFT DELETE — set status = "deleted", gambar TIDAK dihapus dari Cloudinary.
+ * Untuk hapus permanen gunakan DELETE /api/admin/products/[id]/permanent
+ */
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -100,17 +102,17 @@ export async function DELETE(
       return NextResponse.json({ message: "ID tidak valid." }, { status: 400 });
     }
 
-    const product = await Product.findByIdAndDelete(id);
+    const product = await Product.findById(id);
     if (!product) {
       return NextResponse.json({ message: "Produk tidak ditemukan." }, { status: 404 });
     }
-
-    // Hapus gambar dari Cloudinary jika ada — tapi tidak throw jika gagal
-    if (product.image) {
-      await deleteFromCloudinary(product.image);
+    if (product.status === "deleted") {
+      return NextResponse.json({ message: "Produk sudah dihapus sebelumnya." }, { status: 409 });
     }
 
-    return NextResponse.json({ message: "Produk berhasil dihapus." });
+    await Product.findByIdAndUpdate(id, { status: "deleted" });
+
+    return NextResponse.json({ message: "Produk berhasil dipindahkan ke sampah." });
   } catch (err) {
     console.error("DELETE /api/admin/products/[id] error:", err);
     return NextResponse.json({ message: "Gagal menghapus produk." }, { status: 500 });

@@ -4,14 +4,21 @@ import Product from "@/models/Product";
 import Category from "@/models/Category";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 
-/* GET /api/admin/products — semua produk (aktif & nonaktif) untuk halaman admin */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await connectDB();
 
-    const products = await Product.find()
+    const { searchParams } = new URL(req.url);
+    const tab = searchParams.get("tab"); // "trash" | null
+
+    const filter =
+      tab === "trash"
+        ? { status: "deleted" }
+        : { status: { $in: ["active", "inactive"] } };
+
+    const products = await Product.find(filter)
       .populate("category_id", "name")
-      .sort({ createdAt: -1 })
+      .sort({ updatedAt: -1 })
       .lean();
 
     const categories = await Category.find({ status: "active" })
@@ -24,21 +31,18 @@ export async function GET() {
   }
 }
 
-/* POST /api/admin/products — tambah produk baru (FormData karena ada upload gambar) */
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
 
-    // Pakai FormData bukan JSON karena ada file gambar
-    const formData   = await req.formData();
-    const name       = formData.get("name")        as string | null;
+    const formData    = await req.formData();
+    const name        = formData.get("name")        as string | null;
     const category_id = formData.get("category_id") as string | null;
-    const price      = formData.get("price")       as string | null;
+    const price       = formData.get("price")       as string | null;
     const description = formData.get("description") as string | null;
-    const status     = formData.get("status")      as string | null;
-    const imageFile  = formData.get("image")       as File   | null;
+    const status      = formData.get("status")      as string | null;
+    const imageFile   = formData.get("image")       as File   | null;
 
-    // Validasi field wajib
     if (!name?.trim()) {
       return NextResponse.json({ message: "Nama produk tidak boleh kosong." }, { status: 400 });
     }
@@ -49,15 +53,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Harga tidak valid." }, { status: 400 });
     }
 
-    // Cek duplikat nama (case-insensitive)
+    // Cek duplikat nama — hanya di antara produk yang belum deleted
     const existing = await Product.findOne({
-      name: { $regex: new RegExp(`^${name.trim()}$`, "i") },
+      name:   { $regex: new RegExp(`^${name.trim()}$`, "i") },
+      status: { $ne: "deleted" },
     });
     if (existing) {
       return NextResponse.json({ message: "Nama produk sudah digunakan." }, { status: 409 });
     }
 
-    // Upload gambar ke Cloudinary jika ada
     let imageUrl: string | undefined;
     if (imageFile && imageFile.size > 0) {
       const bytes  = await imageFile.arrayBuffer();
@@ -74,7 +78,6 @@ export async function POST(req: NextRequest) {
       image:       imageUrl ?? null,
     });
 
-    // Populate category_id supaya response langsung lengkap
     await product.populate("category_id", "name");
 
     return NextResponse.json({ product }, { status: 201 });

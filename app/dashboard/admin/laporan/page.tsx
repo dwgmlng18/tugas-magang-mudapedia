@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import {
   IconReceipt2,
   IconUser,
@@ -62,9 +61,9 @@ export default function LaporanPage() {
   const [isFiltered, setIsFiltered] = useState(false);
 
   /* Modal detail */
-  const [modalOpen,   setModalOpen]   = useState(false);
-  const [detail,      setDetail]      = useState<TransactionDetail | null>(null);
-  const [loadDetail,  setLoadDetail]  = useState(false);
+  const [modalOpen,  setModalOpen]  = useState(false);
+  const [detail,     setDetail]     = useState<TransactionDetail | null>(null);
+  const [loadDetail, setLoadDetail] = useState(false);
 
   useEffect(() => { fetchTransactions(); }, []);
 
@@ -85,14 +84,13 @@ export default function LaporanPage() {
     }
   };
 
-  /* ── Apply filter ── */
+  /* ── Apply / reset filter ── */
   const applyFilter = () => {
     if (!filterFrom && !filterTo) return;
     setIsFiltered(true);
     fetchTransactions(filterFrom, filterTo);
   };
 
-  /* ── Reset filter ── */
   const resetFilter = () => {
     setFilterFrom("");
     setFilterTo("");
@@ -136,30 +134,24 @@ export default function LaporanPage() {
           <span className="text-[12px] font-semibold text-gray-600">Filter Tanggal</span>
         </div>
         <div className="flex flex-wrap gap-3 items-end">
-          {/* Dari */}
           <div className="flex-1 min-w-[140px]">
             <label className="block text-[11px] font-semibold text-gray-400 mb-1">Dari</label>
             <input
-              type="date"
-              value={filterFrom}
+              type="date" value={filterFrom}
               onChange={(e) => setFilterFrom(e.target.value)}
               className="w-full border-[1.5px] border-gray-200 rounded-lg px-3 py-2 text-[13px]
                          text-gray-800 outline-none focus:border-green-400 transition-colors"
             />
           </div>
-          {/* Sampai */}
           <div className="flex-1 min-w-[140px]">
             <label className="block text-[11px] font-semibold text-gray-400 mb-1">Sampai</label>
             <input
-              type="date"
-              value={filterTo}
+              type="date" value={filterTo} min={filterFrom}
               onChange={(e) => setFilterTo(e.target.value)}
-              min={filterFrom}
               className="w-full border-[1.5px] border-gray-200 rounded-lg px-3 py-2 text-[13px]
                          text-gray-800 outline-none focus:border-green-400 transition-colors"
             />
           </div>
-          {/* Tombol */}
           <div className="flex gap-2">
             <button
               onClick={applyFilter}
@@ -210,34 +202,22 @@ export default function LaporanPage() {
                          hover:border-green-300 hover:bg-green-50/30 transition-all text-left group"
             >
               <div className="flex items-center justify-between gap-3">
-                {/* Kiri — info kasir + tanggal */}
-                <div className="flex items-center gap-3 min-w-0">
-                  {/* Avatar kasir */}
-                  <div className="w-9 h-9 rounded-full bg-green-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                    {trx.cashier.image ? (
-                      <Image
-                        src={trx.cashier.image}
-                        alt={trx.cashier.name}
-                        width={36} height={36}
-                        className="object-cover w-full h-full"
-                      />
-                    ) : (
-                      <IconUser size={18} stroke={1.5} className="text-green-500" />
-                    )}
-                  </div>
 
-                  <div className="min-w-0">
+                {/* Kiri — nama kasir + tanggal (tanpa avatar) */}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <IconUser size={12} stroke={2} className="text-gray-400 flex-shrink-0" />
                     <p className="text-[13px] font-bold text-gray-900 truncate">
                       {trx.cashier.name}
                     </p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <IconCalendar size={11} stroke={2} className="text-gray-400 flex-shrink-0" />
-                      <p className="text-[11px] text-gray-400">{formatDate(trx.createdAt)}</p>
-                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <IconCalendar size={11} stroke={2} className="text-gray-400 flex-shrink-0" />
+                    <p className="text-[11px] text-gray-400">{formatDate(trx.createdAt)}</p>
                   </div>
                 </div>
 
-                {/* Kanan — total + chevron */}
+                {/* Kanan — total harga + jumlah item + chevron */}
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <div className="text-right">
                     <p className="text-[14px] font-extrabold text-green-600">
@@ -252,6 +232,19 @@ export default function LaporanPage() {
                     className="text-gray-300 group-hover:text-green-500 transition-colors"
                   />
                 </div>
+              </div>
+
+              {/* Baris bawah — total harga & jumlah item sebagai pill */}
+              <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-gray-100">
+                <span className="inline-flex items-center gap-1 bg-green-50 text-green-700
+                                 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">
+                  <IconShoppingBag size={11} stroke={2} />
+                  {trx.total_items} item
+                </span>
+                <span className="inline-flex items-center gap-1 bg-gray-50 text-gray-500
+                                 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">
+                  Total: {formatRupiah(trx.total_price)}
+                </span>
               </div>
             </button>
           ))}
@@ -290,39 +283,24 @@ export default function LaporanPage() {
               {/* Isi detail */}
               {!loadDetail && detail && (
                 <>
-                  {/* Info transaksi */}
+                  {/* Info transaksi — tanpa avatar, tanpa ID */}
                   <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      {/* Avatar */}
-                      <div className="w-10 h-10 rounded-full bg-green-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                        {detail.cashier.image ? (
-                          <Image
-                            src={detail.cashier.image}
-                            alt={detail.cashier.name}
-                            width={40} height={40}
-                            className="object-cover w-full h-full"
-                          />
-                        ) : (
-                          <IconUser size={20} stroke={1.5} className="text-green-500" />
-                        )}
-                      </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <IconUser size={14} stroke={2} className="text-gray-400 flex-shrink-0" />
                       <div>
-                        <p className="text-[13px] font-bold text-gray-900">{detail.cashier.name}</p>
-                        <p className="text-[11px] text-gray-400">{detail.cashier.email}</p>
+                        <p className="text-[13px] font-bold text-gray-900 leading-none">
+                          {detail.cashier.name}
+                        </p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{detail.cashier.email}</p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="text-[11px] text-gray-400 mb-0.5">Tanggal Transaksi</p>
-                        <p className="text-[12px] font-semibold text-gray-800">{formatDateTime(detail.createdAt)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-gray-400 mb-0.5">ID Transaksi</p>
-                        <p className="text-[12px] font-semibold text-gray-800 truncate">
-                          #{detail._id.slice(-8).toUpperCase()}
-                        </p>
-                      </div>
+                    {/* Hanya tanggal — ID dihapus */}
+                    <div>
+                      <p className="text-[11px] text-gray-400 mb-0.5">Tanggal Transaksi</p>
+                      <p className="text-[12px] font-semibold text-gray-800">
+                        {formatDateTime(detail.createdAt)}
+                      </p>
                     </div>
                   </div>
 
