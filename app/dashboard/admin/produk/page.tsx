@@ -330,7 +330,7 @@ export default function AdminProdukPage() {
       {/* ── Grid Produk ─────────────────────────────────────────────── */}
       {!loading && filtered.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {filtered.map((product) => (
+          {filtered.map((product, index) => (
             <div
               key={product._id}
               className={`bg-white rounded-xl border-[1.5px] overflow-hidden flex flex-col ${
@@ -343,6 +343,7 @@ export default function AdminProdukPage() {
                   <Image
                     src={product.image} alt={product.name} fill className="object-cover"
                     sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                    priority={index < 4}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -451,7 +452,7 @@ export default function AdminProdukPage() {
               >
                 {formImagePreview ? (
                   <Image src={formImagePreview} alt="Preview" fill className="object-cover"
-                    unoptimized={formImageFile !== null} />
+                    sizes="(max-width: 480px) 100vw, 400px" unoptimized={formImageFile !== null} />
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-gray-300">
                     <IconUpload size={28} stroke={1.5} />

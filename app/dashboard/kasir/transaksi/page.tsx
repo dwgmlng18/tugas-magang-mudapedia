@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   IconPlus, IconEdit, IconTrash, IconReceipt2,
-  IconCalendar, IconShoppingCart, IconFilter,
-  IconUser, IconX, IconPhoto, IconAlertTriangle,
+  IconCalendar, IconShoppingCart, IconShoppingBag, IconFilter,
+  IconUser, IconX, IconAlertTriangle,
 } from "@tabler/icons-react";
 
 /* ─── Types ─────────────────────────────────────────────── */
@@ -30,11 +29,12 @@ interface DetailItem {
 }
 
 interface TransactionDetail {
-  _id:         string;
-  total_items: number;
-  total_price: number;
-  createdAt:   string;
-  items:       DetailItem[];
+  _id:          string;
+  cashier_name: string;
+  total_items:  number;
+  total_price:  number;
+  createdAt:    string;
+  items:        DetailItem[];
 }
 
 /* ─── Helpers ────────────────────────────────────────────── */
@@ -48,7 +48,7 @@ const formatDate = (iso: string) =>
 
 const formatDateTimeLong = (iso: string) =>
   new Date(iso).toLocaleString("id-ID", {
-    weekday: "long", day: "numeric", month: "long",
+    day: "numeric", month: "long",
     year: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
@@ -107,11 +107,6 @@ function DetailModal({
             <IconReceipt2 size={18} stroke={2} className="text-green-600" />
             <div>
               <h2 className="text-[16px] font-bold text-gray-900 leading-none">Detail Transaksi</h2>
-              {detail && (
-                <p className="text-[11px] text-gray-400 font-mono mt-0.5">
-                  #{String(detail._id).slice(-8).toUpperCase()}
-                </p>
-              )}
             </div>
           </div>
           <button
@@ -143,9 +138,9 @@ function DetailModal({
               {/* Info transaksi */}
               <div className="bg-gray-50 rounded-xl p-4 mb-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <IconShoppingCart size={14} stroke={2} className="text-gray-400 flex-shrink-0" />
+                  <IconUser size={14} stroke={2} className="text-gray-400 flex-shrink-0" />
                   <p className="text-[13px] font-bold text-gray-900 leading-none">
-                    {detail.total_items} item dibeli
+                    {detail.cashier_name}
                   </p>
                 </div>
                 <div>
@@ -166,49 +161,53 @@ function DetailModal({
                 </div>
               )}
 
-              {/* Tabel / daftar item produk */}
+              {/* Tabel item produk */}
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <IconShoppingCart size={14} stroke={2} className="text-gray-400" />
+                  <IconShoppingBag size={14} stroke={2} className="text-gray-400" />
                   <span className="text-[12px] font-semibold text-gray-600">
-                    Item Produk ({detail.items.length} jenis)
+                    Item Produk ({detail.total_items} item)
                   </span>
                 </div>
 
-                <div className="border-[1.5px] border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-100">
-                  {detail.items.map((item) => (
-                    <div key={item._id} className="flex items-center gap-3 px-4 py-3 bg-white">
-                      <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-100
-                                      flex-shrink-0 overflow-hidden relative">
-                        {item.image ? (
-                          <Image src={item.image} alt={item.name} fill className="object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <IconPhoto size={16} stroke={1} className="text-gray-300" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className={`text-[13px] font-semibold truncate ${item.deleted ? "text-gray-400" : "text-gray-800"}`}>
-                            {item.name}
-                          </p>
-                          {item.deleted && (
-                            <span className="text-[9px] font-bold bg-red-100 text-red-500
-                                             px-1.5 py-0.5 rounded flex-shrink-0">
-                              DIHAPUS
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-gray-400 mt-0.5">
-                          {formatRupiah(item.price)} × {item.quantity}
-                        </p>
-                      </div>
-                      <p className="text-[13px] font-extrabold text-green-600 flex-shrink-0">
-                        {formatRupiah(item.subtotal)}
-                      </p>
-                    </div>
-                  ))}
+                <div className="border-[1.5px] border-gray-100 rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100">
+                        <th className="text-left text-[11px] font-semibold text-gray-400 px-3 py-2.5">Produk</th>
+                        <th className="text-center text-[11px] font-semibold text-gray-400 px-3 py-2.5">Qty</th>
+                        <th className="text-right text-[11px] font-semibold text-gray-400 px-3 py-2.5">Harga</th>
+                        <th className="text-right text-[11px] font-semibold text-gray-400 px-3 py-2.5">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.items.map((item) => (
+                        <tr key={item._id} className="border-b border-gray-100 last:border-0">
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className={`text-[13px] font-semibold ${item.deleted ? "text-gray-400 italic" : "text-gray-800"}`}>
+                                {item.name}
+                              </p>
+                              {item.deleted && (
+                                <span className="text-[9px] font-bold bg-red-100 text-red-500 px-1.5 py-0.5 rounded flex-shrink-0">
+                                  DIHAPUS
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-center text-[13px] text-gray-600">
+                            {item.quantity}
+                          </td>
+                          <td className="px-3 py-2.5 text-right text-[13px] text-gray-600">
+                            {formatRupiah(item.price)}
+                          </td>
+                          <td className="px-3 py-2.5 text-right text-[13px] font-semibold text-gray-800">
+                            {formatRupiah(item.subtotal)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -223,7 +222,7 @@ function DetailModal({
           )}
         </div>
 
-        {/* Footer aksi — biarkan sesuai (sudah ada tampilannya sendiri) */}
+        {/* Footer aksi */}
         {!loading && detail && (
           <div className="px-6 py-4 border-t border-gray-100 flex gap-2 flex-shrink-0">
             <button

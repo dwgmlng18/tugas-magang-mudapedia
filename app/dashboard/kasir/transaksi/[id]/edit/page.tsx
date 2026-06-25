@@ -221,7 +221,7 @@ export default function EditTransaksiPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 overflow-y-auto pb-2">
-            {filtered.map((product) => {
+            {filtered.map((product, index) => {
               const qty = cartQty(product._id);
               return (
                 <div key={product._id}
@@ -231,7 +231,7 @@ export default function EditTransaksiPage() {
                   <div className="relative w-full aspect-square bg-[#f0fdf4]">
                     {product.image ? (
                       <Image src={product.image} alt={product.name} fill className="object-cover"
-                        sizes="(max-width: 640px) 50vw, 33vw" />
+                        sizes="(max-width: 640px) 50vw, 33vw" priority={index < 3} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <IconPhoto size={32} stroke={1} className="text-green-200" />
@@ -318,7 +318,7 @@ export default function EditTransaksiPage() {
                     }`}>
                     <div className="w-9 h-9 rounded-lg bg-green-50 flex-shrink-0 overflow-hidden relative">
                       {item.image ? (
-                        <Image src={item.image} alt={item.name} fill className="object-cover" />
+                        <Image src={item.image} alt={item.name} fill className="object-cover" sizes="36px" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <IconPhoto size={16} stroke={1} className="text-green-300" />

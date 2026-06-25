@@ -132,7 +132,7 @@ export default function KasirProdukPage() {
       {/* Grid Produk */}
       {!loading && filtered.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {filtered.map((product) => (
+          {filtered.map((product, index) => (
             <div
               key={product._id}
               className="bg-white rounded-xl border-[1.5px] border-gray-200 overflow-hidden"
@@ -145,6 +145,7 @@ export default function KasirProdukPage() {
                     fill
                     className="object-cover"
                     sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                    priority={index < 4}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">

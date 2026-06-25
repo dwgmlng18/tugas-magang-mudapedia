@@ -3,6 +3,7 @@ import connectDB from "@/lib/mongodb";
 import Transaction from "@/models/Transaction";
 import TransactionDetail from "@/models/TransactionDetail";
 import Product from "@/models/Product";
+import Profile from "@/models/Profile";
 import { auth } from "@/lib/auth";
 import mongoose from "mongoose";
 
@@ -33,6 +34,12 @@ export async function GET(
       return NextResponse.json({ message: "Transaksi tidak ditemukan." }, { status: 404 });
     }
 
+    const profile = await Profile.findOne({ user_id: transaction.cashier_id })
+      .select("name")
+      .lean();
+
+    const cashier_name = profile?.name ?? "Kasir";
+
     const details = await TransactionDetail.find({ transaction_id: id })
       .populate("product_id", "name price image status")
       .lean();
@@ -59,7 +66,7 @@ export async function GET(
       };
     });
 
-    return NextResponse.json({ transaction: { ...transaction, items } });
+    return NextResponse.json({ transaction: { ...transaction, cashier_name, items } });
   } catch (err) {
     console.error("GET /api/kasir/transactions/[id] error:", err);
     return NextResponse.json({ message: "Gagal mengambil detail." }, { status: 500 });

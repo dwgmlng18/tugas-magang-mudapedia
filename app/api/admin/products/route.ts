@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
 
     const filter =
       tab === "trash"
-        ? { status: "deleted" }
-        : { status: { $in: ["active", "inactive"] } };
+        ? { status: "deleted" as const }
+        : { status: { $in: ["active", "inactive"] as const } };
 
     const products = await Product.find(filter)
       .populate("category_id", "name")
@@ -73,9 +73,9 @@ export async function POST(req: NextRequest) {
       name:        name.trim(),
       category_id,
       price:       Number(price),
-      description: description?.trim() || null,
+      description: description?.trim() || undefined,
       status:      status === "inactive" ? "inactive" : "active",
-      image:       imageUrl ?? null,
+      image:       imageUrl ?? undefined,
     });
 
     await product.populate("category_id", "name");
