@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       email,
       password: hashed,
       role:     role   ?? "kasir",
-      status:   status ?? "approve", // admin buat langsung approve
+      status:   status ?? "approve",
     });
 
     await Profile.create({

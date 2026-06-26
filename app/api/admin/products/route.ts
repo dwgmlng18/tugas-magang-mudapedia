@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const tab = searchParams.get("tab"); // "trash" | null
+    const tab = searchParams.get("tab");
 
     const filter =
       tab === "trash"

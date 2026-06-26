@@ -16,13 +16,13 @@ interface Product {
 }
 interface CartItem {
   product_id:   string | null;
-  product_name: string;   // snapshot nama produk
-  name:         string;   // display name (sama dengan product_name)
+  product_name: string;
+  name:         string;
   price:        number;
   image?:       string;
   quantity:     number;
   subtotal:     number;
-  deleted?:     boolean;  // produk sudah dihapus dari katalog
+  deleted?:     boolean;
 }
 
 const formatRupiah = (n: number) =>

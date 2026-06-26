@@ -85,11 +85,6 @@ export async function PUT(
   }
 }
 
-/**
- * DELETE /api/admin/products/[id]
- * SOFT DELETE — set status = "deleted", gambar TIDAK dihapus dari Cloudinary.
- * Untuk hapus permanen gunakan DELETE /api/admin/products/[id]/permanent
- */
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -55,14 +55,13 @@ export async function GET(
       return {
         _id:          d._id,
         product_id:   p?._id ?? null,
-        // Pakai nama produk saat ini jika masih ada, fallback ke snapshot product_name
         name:         p?.name ?? d.product_name ?? "Produk dihapus",
         price:        d.price,
         image:        p?.image ?? null,
         quantity:     d.quantity,
         subtotal:     d.subtotal,
-        deleted:      isSoftDeleted || isPermanentlyDeleted, // flag: produk sudah dihapus dari katalog
-        isPermanent:  isPermanentlyDeleted, // flag: produk dihapus permanen
+        deleted:      isSoftDeleted || isPermanentlyDeleted,
+        isPermanent:  isPermanentlyDeleted,
       };
     });
 
@@ -118,7 +117,6 @@ export async function PUT(
       );
     }
 
-    // Resolve product_name if missing from payload
     const productIds = items.map((i) => i.product_id).filter(Boolean);
     const productsList = await Product.find({ _id: { $in: productIds } }).select("name").lean();
     const productMap = new Map(productsList.map((p) => [p._id.toString(), p.name]));

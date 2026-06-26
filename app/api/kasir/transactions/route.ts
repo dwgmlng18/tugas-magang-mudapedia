@@ -67,7 +67,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Resolve product_name if missing from payload
     const productIds = items.map((i) => i.product_id).filter(Boolean);
     const productsList = await Product.find({ _id: { $in: productIds } }).select("name").lean();
     const productMap = new Map(productsList.map((p) => [p._id.toString(), p.name]));
